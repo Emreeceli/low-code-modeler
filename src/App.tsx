@@ -2249,6 +2249,24 @@ VALUES ('${ids.fileId}', '${ids.fileImplementationId}');
       .catch((err) => console.error("Error exporting SVG:", err));
   };
 
+  const getCircuitSvg = (): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    toSvg(ref.current, {
+      filter: (node) => {
+        if (!node) return false;
+        if (node.classList?.contains("react-flow__minimap")) return false;
+        if (node.classList?.contains("react-flow__controls")) return false;
+        if (node.classList?.contains("react-flow__panel")) return false;
+        if (typeof node.className === "string" && node.className.includes("react-flow__panel")) return false;
+        return true;
+      },
+    })
+      .then((dataUrl) => resolve(dataUrl))  // ← Data-URL direkt zurückgeben
+      .catch(reject);
+  });
+};
+
+
   async function deployWorkflowToCamunda(
     workflowName,
     workflowXml,
@@ -2642,14 +2660,15 @@ INSERT INTO public.implementation_package_file (file_id, implementation_package_
         validationResult={validationResult}
       />
     <SendRequestModal
-      open={modalOpen}
-      onClose={() => setModalOpen(false)}
-      compilationTarget={compilationTarget}
-      containsPlaceholder={containsPlaceholder}
-      setCompilationTarget={setCompilationTarget}
-      sendToBackend={sendToBackend}
-      qasmCode={openqasmCode}
-/>
+  open={modalOpen}
+  onClose={() => setModalOpen(false)}
+  compilationTarget={compilationTarget}
+  containsPlaceholder={containsPlaceholder}
+  setCompilationTarget={setCompilationTarget}
+  sendToBackend={sendToBackend}
+  qasmCode={openqasmCode}
+  onGetCircuitSvg={getCircuitSvg}   // ← NEU
+  />
 
       <ConfigModal
         open={isConfigOpen}

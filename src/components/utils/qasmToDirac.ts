@@ -734,6 +734,52 @@ export function statevectorToDirac(
 // ---------------------------------------------------------------------------
 
 /**
+ * Berechnet die marginale Wahrscheinlichkeitsverteilung für eine Teilmenge
+ * von Qubits (partieller Trace).
+ *
+ * @param sv         Vollständiger Statevector (Länge 2^n)
+ * @param numQubits  Gesamtzahl der Qubits
+ * @param keepQubits Indizes der Qubits die behalten werden (0-basiert)
+ * @returns          Array von { basisState, probability } für die gewählten Qubits
+ *
+ * @example
+ * // GHZ-Zustand, nur Qubit 0 betrachten
+ * marginalizeQubits(sv, 3, [0])
+ * // → [{ basisState: "0", probability: 0.5 }, { basisState: "1", probability: 0.5 }]
+ */
+export function marginalizeQubits(
+  sv: Complex[],
+  numQubits: number,
+  keepQubits: number[]
+): { basisState: string; probability: number }[] {
+  // Wahrscheinlichkeit pro Basis-Index (reduziert)
+  const reducedSize = 1 << keepQubits.length;
+  const probs = new Array(reducedSize).fill(0);
+
+  for (let i = 0; i < sv.length; i++) {
+    const p = cabs2(sv[i]);
+    if (p < THRESHOLD) continue;
+
+    // Extrahiere die Bits der gewählten Qubits aus dem Gesamtindex
+    let reducedIdx = 0;
+    for (let k = 0; k < keepQubits.length; k++) {
+      const qubitIdx = keepQubits[k];
+      const bit = numQubits - 1 - qubitIdx; // MSB-first
+      const bitVal = (i >> bit) & 1;
+      reducedIdx |= bitVal << (keepQubits.length - 1 - k);
+    }
+    probs[reducedIdx] += p;
+  }
+
+  return probs
+    .map((probability, idx) => ({
+      basisState: idx.toString(2).padStart(keepQubits.length, '0'),
+      probability: Math.round(probability * 10000) / 10000,
+    }))
+    .filter(({ probability }) => probability > THRESHOLD);
+}
+
+/**
  * Wandelt einen QASM-String in Dirac-Notation um.
  *
  * @example
